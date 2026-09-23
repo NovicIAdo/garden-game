@@ -1,24 +1,25 @@
-import { useEffect, useState } from 'react';
-import { GardenAvatar } from './GardenAvatar.jsx';
+import { useEffect } from 'react';
+import { MemberQr } from './MemberQr.jsx';
 import { WEEK_LENGTH } from '../garden/garden-logic.js';
-import { CheckIcon, CopyIcon } from './icons.jsx';
 
 function shortAddress(address) {
   if (!address) {
     return '—';
   }
 
+  if (address.length <= 10) {
+    return address;
+  }
+
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
 
 /**
- * Member dialog. Opens from the MEMBER control in the top-right corner:
- * a holographic avatar card (the real 3D avatar in a gold gradient frame)
- * above the profile rows, with wallet copy, Escape/outside-click close.
+ * Member dialog: the Auric avatar image, the member QR code beneath it,
+ * then the member and avatar info. Escape/outside-click close.
  */
 export function ProfileCard({
-  walletAddress,
-  traits,
+  memberId,
   gardenNumber,
   currentDay,
   currentStreak,
@@ -27,8 +28,6 @@ export function ProfileCard({
   coinBalance,
   onClose,
 }) {
-  const [copied, setCopied] = useState(false);
-
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.key === 'Escape') {
@@ -40,17 +39,9 @@ export function ProfileCard({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
 
-  const handleCopy = () => {
-    if (!walletAddress) {
-      return;
-    }
-
-    navigator.clipboard?.writeText(walletAddress).catch(() => {});
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1500);
-  };
-
   const rows = [
+    ['Member ID', shortAddress(memberId)],
+    ['Identity', 'Auric'],
     ['Garden', gardenNumber],
     ['Current streak', `${currentStreak} days`],
     ['Longest streak', `${longestStreak} days`],
@@ -74,31 +65,15 @@ export function ProfileCard({
         <h2 className="profile-title">Member</h2>
         <p className="profile-kicker">The keeper of {gardenNumber}</p>
 
-        <div className="profile-avatar-card" aria-label="Member identity card">
-          <div className="profile-avatar-card-inner">
-            <GardenAvatar traits={traits} size="small" />
-            <div className="avatar-card-holo" aria-hidden="true" />
-            <div className="avatar-card-label avatar-card-label-top" aria-hidden="true">
-              <span>Auric</span>
-              <span>★ VII</span>
-            </div>
-            <div className="avatar-card-label avatar-card-label-bottom" aria-hidden="true">
-              <span>Keeper · Holo</span>
-              <span>{gardenNumber}</span>
-            </div>
-          </div>
-        </div>
+        <img
+          src="/tree/auric-avatar.jpg"
+          alt="Auric avatar"
+          className="profile-avatar-image"
+        />
+
+        <MemberQr />
 
         <dl className="profile-rows">
-          <div className="profile-row">
-            <dt>Wallet</dt>
-            <dd>
-              <button type="button" className="profile-copy" onClick={handleCopy}>
-                {shortAddress(walletAddress)}
-                {copied ? <CheckIcon /> : <CopyIcon />}
-              </button>
-            </dd>
-          </div>
           {rows.map(([label, value]) => (
             <div key={label} className="profile-row">
               <dt>{label}</dt>

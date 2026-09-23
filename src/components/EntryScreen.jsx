@@ -1,37 +1,38 @@
-import { useWallet } from '@solana/wallet-adapter-react';
-import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { MemberQr } from './MemberQr.jsx';
 
 /**
- * Cinematic entry: centered NOVICIADO brand, a gold drop line, the serif
- * title, one ritual action. The wallet modal is restyled to match the
- * black-and-gold system via the .wallet-adapter-* overrides in styles.css.
+ * Cinematic entry on pure black: the looping dream video as the hero,
+ * NOVICIADO brand, and the check-in action. In the real club a staff
+ * member scans the member's QR at the door and the check-in grants
+ * water — this prototype simulates that moment with a single action.
  */
-export function EntryScreen() {
-  const { connecting } = useWallet();
-  const { setVisible } = useWalletModal();
-
+export function EntryScreen({ onCheckIn }) {
   return (
     <section className="entry-screen">
       <div className="entry-composition">
-        <div className="entry-branch" aria-hidden="true">
-          <span className="entry-branch-gem" />
-        </div>
+        <video
+          className="entry-video"
+          src="/tree/dream.mp4"
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
 
         <p className="brand-kicker">Noviciado</p>
         <h1 className="brand-title">The Garden</h1>
-        <p className="entry-subtitle">A seven-day ritual. One gold coin.</p>
+        <p className="entry-subtitle">Check in at the club. Water your tree.</p>
 
         <button
           type="button"
           className="primary-button entry-cta"
-          onClick={() => setVisible(true)}
-          disabled={connecting}
+          onClick={onCheckIn}
         >
           <span className="button-dot" aria-hidden="true" />
-          {connecting ? 'Connecting…' : 'Connect wallet'}
+          Check in
         </button>
 
-        <p className="entry-chain-label">Solana · Devnet</p>
+        <p className="entry-chain-label">Noviciado Coffee · Members</p>
       </div>
 
       <p className="entry-footnote">A private digital ritual by Noviciado.</p>

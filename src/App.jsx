@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useWallet } from '@solana/wallet-adapter-react';
 import {
   WEEK_LENGTH,
   advanceDevDay,
@@ -14,10 +13,11 @@ import {
 } from './garden/garden-logic.js';
 import { playConnectChime, playDayCompleteChime, playWaterChime } from './garden/sound-engine.js';
 import { EntryScreen } from './components/EntryScreen.jsx';
-import { AvatarSequence } from './components/AvatarSequence.jsx';
+import { LoadingScreen } from './components/LoadingScreen.jsx';
 import { GardenAvatar } from './components/GardenAvatar.jsx';
 import { GardenPlant } from './components/GardenPlant.jsx';
 import { DayProgress } from './components/DayProgress.jsx';
+import { MemberQr } from './components/MemberQr.jsx';
 import { WateringOverlay } from './components/WateringOverlay.jsx';
 import { RewardSequence } from './components/RewardSequence.jsx';
 import { ProfileCard } from './components/ProfileCard.jsx';
@@ -30,15 +30,51 @@ import {
 } from './components/icons.jsx';
 
 const PREFS_KEY = 'noviciado-garden-prefs';
+const MEMBER_KEY = 'noviciado-member-id';
 
 // Vite's real dev/production flag. Using the exact `import.meta.env.DEV`
 // expression (no optional chaining) lets Vite statically replace it with
 // `false` at build time, so the dev-only branch below is dead-code
 // eliminated from production builds rather than merely hidden at runtime.
-const isDevMode = true;
+const isDevMode = import.meta.env.DEV;
 
 function gardenStorageKey(address) {
   return `noviciado-garden:${address}`;
+}
+
+/**
+ * Stable local member identity for the prototype. The real system gets
+ * `members.id` from the `noviciado_session` cookie (see the handoff:
+ * entry_tokens → check-in → water); here a device-local id stands in.
+ */
+function getOrCreateMemberId() {
+  try {
+    const existing = window.localStorage.getItem(MEMBER_KEY);
+    if (existing) {
+      return existing;
+    }
+
+    const id = `NV-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    window.localStorage.setItem(MEMBER_KEY, id);
+    return id;
+  } catch {
+    return 'NV-GUEST';
+  }
+}
+
+/**
+ * Dev-only stage preview: open `?tree=N` (0..7) to render the garden
+ * tree at a specific growth stage without connecting a wallet. Used for
+ * headless preview-frame verification of the growth animation.
+ */
+function readTreePreviewStage() {
+  const match = /[?&]tree=(\d+)/.exec(window.location.search);
+  if (!match) {
+    return null;
+  }
+
+  const stage = Number(match[1]);
+  return Number.isFinite(stage) ? Math.min(7, Math.max(0, stage)) : null;
 }
 
 function loadGardenState(address) {
@@ -127,8 +163,7 @@ function Dust({ reducedMotion }) {
 }
 
 export function App() {
-  const { connected, connecting, publicKey } = useWallet();
-  const walletAddress = publicKey?.toBase58() ?? null;
+  const memberId = useMemo(() => getOrCreateMemberId(), []);
 
   const initialPrefs = useMemo(() => loadPrefs(), []);
   const [soundOn, setSoundOn] = useState(initialPrefs.soundOn);
@@ -137,6 +172,7 @@ export function App() {
   const reducedMotion = reducedMotionOverride || systemReducedMotion;
 
   const [gardenState, setGardenState] = useState(null);
+  const [checkedIn, setCheckedIn] = useState(false);
   const [screen, setScreen] = useState('entry');
   const [showWatering, setShowWatering] = useState(false);
   const [showReward, setShowReward] = useState(false);
@@ -149,32 +185,12 @@ export function App() {
   }, [soundOn, reducedMotionOverride]);
 
   useEffect(() => {
-    if (!connected || !walletAddress) {
-      setScreen('entry');
-      setGardenState(null);
+    if (!gardenState) {
       return;
     }
 
-    playConnectChime(soundOn);
-    const existing = loadGardenState(walletAddress);
-
-    if (existing) {
-      setGardenState(existing);
-      setScreen('garden');
-    } else {
-      setGardenState(createGardenState(walletAddress));
-      setScreen('generating');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected, walletAddress]);
-
-  useEffect(() => {
-    if (!walletAddress || !gardenState) {
-      return;
-    }
-
-    saveGardenState(walletAddress, gardenState);
-  }, [walletAddress, gardenState]);
+    saveGardenState(memberId, gardenState);
+  }, [memberId, gardenState]);
 
   useEffect(() => {
     if (!gardenState || screen !== 'garden') {
@@ -195,6 +211,23 @@ export function App() {
   }, [gardenState, screen, showReward]);
 
   const handleEnterGarden = useCallback(() => setScreen('garden'), []);
+
+  // The check-in is the door: a staff scan in production, a single
+  // action in this prototype. It opens the member's existing garden or
+  // creates a new one, behind a short leaf-loading moment.
+  const handleCheckIn = useCallback(() => {
+    if (checkedIn) {
+      return;
+    }
+
+    setCheckedIn(true);
+    playConnectChime(soundOn);
+
+    const existing = loadGardenState(memberId);
+    setGardenState(existing ?? createGardenState(memberId));
+    setScreen('loading');
+    window.setTimeout(() => setScreen('garden'), 1800);
+  }, [checkedIn, memberId, soundOn]);
 
   const handleWaterClick = useCallback(() => {
     if (!gardenState || !canWaterToday(gardenState)) {
@@ -235,20 +268,28 @@ export function App() {
     setGardenState((current) => (current ? advanceDevDay(current) : current));
   }, []);
 
-  if (!connected) {
-    return <EntryScreen />;
+  if (isDevMode) {
+    const treePreviewStage = readTreePreviewStage();
+    if (treePreviewStage !== null) {
+      return (
+        <main className="app" data-reduced-motion={false}>
+          <section className="garden-stage">
+            <div className="garden-column plant-column">
+              <GardenPlant stage={treePreviewStage} reducedMotion={false} />
+              <p className="stage-label">Growth · {treePreviewStage}/7</p>
+            </div>
+          </section>
+        </main>
+      );
+    }
   }
 
-  if (screen === 'generating' && gardenState) {
-    return (
-      <AvatarSequence
-        traits={gardenState.avatarTraits}
-        gardenNumber={gardenState.gardenNumber}
-        onEnter={handleEnterGarden}
-        soundOn={soundOn}
-        reducedMotion={reducedMotion}
-      />
-    );
+  if (!checkedIn) {
+    return <EntryScreen onCheckIn={handleCheckIn} />;
+  }
+
+  if (screen === 'loading') {
+    return <LoadingScreen />;
   }
 
   if (!gardenState) {
@@ -316,6 +357,9 @@ export function App() {
             currentDay={gardenState.currentDay}
             totalDays={WEEK_LENGTH}
           />
+          <div className="column-qr">
+            <MemberQr />
+          </div>
           <p className="stage-label">Identity · Auric</p>
         </div>
 
@@ -384,8 +428,7 @@ export function App() {
 
       {showProfile ? (
         <ProfileCard
-          walletAddress={walletAddress}
-          traits={gardenState.avatarTraits}
+          memberId={memberId}
           gardenNumber={gardenState.gardenNumber}
           currentDay={gardenState.currentDay}
           currentStreak={gardenState.currentStreak}

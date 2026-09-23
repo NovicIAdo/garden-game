@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
+import { Bloom, EffectComposer, ToneMapping, Vignette } from '@react-three/postprocessing';
+import { ToneMappingMode } from 'postprocessing';
 import { WateringScene } from '../three/WateringScene.jsx';
+import { RitualCamera } from '../three/CameraRig.jsx';
+
+const FOCUS_BY_PHASE = { pouring: 0.55, settling: 1, result: 0.25 };
 
 export function WateringOverlay({ onComplete, reducedMotion, fromStage = 0, toStage = 1 }) {
   const [phase, setPhase] = useState(reducedMotion ? 'result' : 'pouring');
@@ -18,6 +23,8 @@ export function WateringOverlay({ onComplete, reducedMotion, fromStage = 0, toSt
     return () => timers.forEach(clearTimeout);
   }, [reducedMotion]);
 
+  const focus = FOCUS_BY_PHASE[phase] ?? 0;
+
   return (
     <div className="watering-overlay" role="status" aria-live="polite">
       <div className="watering-sweep" aria-hidden="true" />
@@ -26,14 +33,20 @@ export function WateringOverlay({ onComplete, reducedMotion, fromStage = 0, toSt
         Skip
       </button>
 
-      <div className="watering-canvas" aria-hidden="true">
+      <div className={`watering-canvas${toStage >= 7 && phase === 'result' ? ' is-final-dream' : ''}`} aria-hidden="true">
         <Canvas
-          shadows
           dpr={[1, 2]}
           camera={{ position: [0, 0.5, 5.8], fov: 38 }}
-          gl={{ alpha: true, antialias: true }}
+          gl={{ alpha: false, antialias: true }}
         >
+          <RitualCamera focus={focus} reducedMotion={reducedMotion} />
           <WateringScene fromStage={fromStage} toStage={toStage} phase={phase} reducedMotion={reducedMotion} />
+
+          <EffectComposer multisampling={0}>
+            <Bloom mipmapBlur intensity={0.42} luminanceThreshold={0.62} luminanceSmoothing={0.2} radius={0.65} />
+            <Vignette eskil={false} offset={0.22} darkness={0.58} />
+            <ToneMapping mode={ToneMappingMode.LINEAR} />
+          </EffectComposer>
         </Canvas>
       </div>
 

@@ -14,10 +14,12 @@
   },
   "dependencies": {
     "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
     "@solana/wallet-adapter-base": "^0.9.27",
     "@solana/wallet-adapter-react": "^0.15.39",
     "@solana/wallet-adapter-react-ui": "^0.9.39",
     "@solana/web3.js": "^1.98.4",
+    "postprocessing": "^6.39.5",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "three": "^0.185.1"

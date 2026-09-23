@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { StudioEnvironment } from './StudioEnvironment.jsx';
-import { PottedWeed } from './PottedWeed.jsx';
+import { TreeStageSprite } from './TreeStageSprite.jsx';
+import { GoldDust, ParticleBurst } from './GoldParticles.jsx';
 
 function WaterDroplet({ active, reducedMotion }) {
   const ref = useRef(null);
@@ -23,7 +24,7 @@ function WaterDroplet({ active, reducedMotion }) {
     const progress = Math.min(1, elapsed / duration);
 
     ref.current.visible = active && progress < 1;
-    ref.current.position.y = 2.2 - progress * 2.6;
+    ref.current.position.y = 2.2 - progress * 2.35;
     ref.current.material.opacity = active ? Math.min(1, 1 - progress + 0.3) : 0;
   });
 
@@ -43,56 +44,12 @@ function WaterDroplet({ active, reducedMotion }) {
   );
 }
 
-function RisingParticles({ active }) {
-  const pointsRef = useRef(null);
-  const startRef = useRef(0);
-
-  const positions = useMemo(() => {
-    const array = new Float32Array(24 * 3);
-    for (let i = 0; i < 24; i += 1) {
-      array[i * 3] = (Math.random() - 0.5) * 1.1;
-      array[i * 3 + 1] = -0.7 + Math.random() * 0.3;
-      array[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
-    }
-    return array;
-  }, []);
-
-  useEffect(() => {
-    if (active) {
-      startRef.current = performance.now();
-    }
-  }, [active]);
-
-  useFrame(() => {
-    if (!pointsRef.current) {
-      return;
-    }
-
-    const elapsed = (performance.now() - startRef.current) / 1000;
-    const visible = active && elapsed < 2;
-    pointsRef.current.visible = visible;
-
-    if (visible) {
-      pointsRef.current.position.y = elapsed * 0.5;
-      pointsRef.current.material.opacity = Math.max(0, 1 - elapsed / 2);
-    }
-  });
-
-  return (
-    <points ref={pointsRef} visible={false}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" args={[positions, 3]} />
-      </bufferGeometry>
-      <pointsMaterial color="#f6e4b0" size={0.045} transparent opacity={0} sizeAttenuation toneMapped={false} />
-    </points>
-  );
-}
-
 /**
- * The full watering reaction: light/water enters the pot, the golden
- * plant physically responds (growth lerp + traveling emissive pulse via
- * PottedWeed/GoldenBloom), and small particles rise from the soil — all
- * real 3D motion driven by `phase`, not CSS keyframes.
+ * The full watering reaction: the camera pushes toward the pot while
+ * water falls, the tree grows from `fromStage` to `toStage` (video
+ * playback inside TreeStageSprite — the check-in cutscene) under a gold
+ * light wash, and a fountain of gold sparks kicks up from the soil — all
+ * real 3D motion driven by `phase`.
  */
 export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
   const [growthStage, setGrowthStage] = useState(fromStage);
@@ -106,9 +63,16 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
   return (
     <>
       <StudioEnvironment />
-      <PottedWeed stage={growthStage} waterPulse={1} reducedMotion={reducedMotion} />
+      <TreeStageSprite stage={growthStage} waterPulse={1} reducedMotion={reducedMotion} />
+      <GoldDust count={36} reducedMotion={reducedMotion} />
       <WaterDroplet active={phase === 'pouring'} reducedMotion={reducedMotion} />
-      <RisingParticles active={phase === 'settling'} />
+      <ParticleBurst
+        trigger={phase === 'settling' ? 1 : 0}
+        position={[0, -0.12, 0.35]}
+        count={36}
+        mode="fountain"
+        reducedMotion={reducedMotion}
+      />
     </>
   );
 }
