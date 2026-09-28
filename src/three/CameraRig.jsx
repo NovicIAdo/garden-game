@@ -27,8 +27,8 @@ export function RitualCamera({ focus = 0, shakeKey = 0, reducedMotion = false })
     }
 
     const time = state.clock.getElapsedTime();
-    const driftX = Math.sin(time * 0.22) * 0.09;
-    const driftY = 0.5 + Math.sin(time * 0.31) * 0.05;
+    const driftX = Math.sin(time * 0.22) * 0.035;
+    const driftY = 0.5 + Math.sin(time * 0.31) * 0.02;
     const targetZ = 5.8 - focus * 1.1;
     const easedZ = camera.position.z + (targetZ - camera.position.z) * 0.06;
 
@@ -37,8 +37,8 @@ export function RitualCamera({ focus = 0, shakeKey = 0, reducedMotion = false })
     let shakeY = 0;
     if (elapsed >= 0 && elapsed < SHAKE_DURATION) {
       const decay = 1 - elapsed / SHAKE_DURATION;
-      shakeX = (Math.random() - 0.5) * 0.06 * decay;
-      shakeY = (Math.random() - 0.5) * 0.05 * decay;
+      shakeX = (Math.random() - 0.5) * 0.03 * decay;
+      shakeY = (Math.random() - 0.5) * 0.025 * decay;
     }
 
     camera.position.set(driftX + shakeX, driftY + shakeY, easedZ);
@@ -80,14 +80,17 @@ export function usePointerParallax() {
 export function ParallaxGroup({ pointerRef, multiplier = 1, reducedMotion = false, children }) {
   const ref = useRef(null);
 
-  useFrame(() => {
+  useFrame((state) => {
     if (!ref.current) {
       return;
     }
 
+    // Gentler parallax; even gentler on phones, where a stray touch can
+    // otherwise swing the tree sideways while scrolling.
+    const narrow = state.size.width < 700;
     const { x, y } = pointerRef.current;
-    const targetX = reducedMotion ? 0 : x * 0.14 * multiplier;
-    const targetY = reducedMotion ? 0 : y * 0.09 * multiplier;
+    const targetX = reducedMotion ? 0 : x * (narrow ? 0.05 : 0.08) * multiplier;
+    const targetY = reducedMotion ? 0 : y * (narrow ? 0.03 : 0.05) * multiplier;
     ref.current.position.x += (targetX - ref.current.position.x) * 0.06;
     ref.current.position.y += (targetY - ref.current.position.y) * 0.06;
   });

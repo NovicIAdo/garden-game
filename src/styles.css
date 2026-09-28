@@ -1308,7 +1308,16 @@ p {
 
   .garden-plant {
     width: 250px;
-    height: 310px;
+    height: 260px;
+  }
+
+  /* The growth video only needs ~229px of canvas height, so the
+     container is shortened to free vertical room on phones; the late
+     stages then grow 25% (anchored at the pot) without pushing the
+     crown above the header or off the top of the screen. */
+  .garden-plant.is-late-stage {
+    transform: scale(1.25);
+    transform-origin: 50% 100%;
   }
 }
 
