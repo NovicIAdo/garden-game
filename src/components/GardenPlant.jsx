@@ -34,6 +34,7 @@ export function GardenPlant({ stage, reducedMotion = false }) {
       <Canvas
         shadows
         dpr={[1, 2]}
+        resize={{ offsetSize: true }}
         camera={{ position: [0, 0.5, 5.8], fov: 38 }}
         gl={{ alpha: false, antialias: true }}
       >

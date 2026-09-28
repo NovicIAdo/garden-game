@@ -62,6 +62,7 @@ export function RewardSequence({ onClose, balance, streak, week, soundOn, reduce
         <Canvas
           shadows
           dpr={[1, 2]}
+          resize={{ offsetSize: true }}
           camera={{ position: [0, 0.6, 6.4], fov: 42 }}
           gl={{ alpha: true, antialias: true }}
         >

@@ -36,6 +36,7 @@ export function WateringOverlay({ onComplete, reducedMotion, fromStage = 0, toSt
       <div className={`watering-canvas${toStage >= 7 && phase === 'result' ? ' is-final-dream' : ''}`} aria-hidden="true">
         <Canvas
           dpr={[1, 2]}
+          resize={{ offsetSize: true }}
           camera={{ position: [0, 0.5, 5.8], fov: 38 }}
           gl={{ alpha: false, antialias: true }}
         >
