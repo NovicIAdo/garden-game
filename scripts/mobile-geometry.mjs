@@ -14,6 +14,7 @@ let CDP_PORT = 9231;
 const VIEWPORTS = [
   { label: 'iphone-14', width: 390, height: 844 },
   { label: 'iphone-se', width: 375, height: 667 },
+  { label: 'android-small', width: 360, height: 640 },
 ];
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -151,6 +152,7 @@ async function main() {
               headerBottom: +h.bottom.toFixed(1),
               stageTop: +s.top.toFixed(1),
               panelTop: p ? +p.top.toFixed(1) : null,
+              panelBottom: p ? +p.bottom.toFixed(1) : null,
             };
           })()`);
 
@@ -171,7 +173,7 @@ async function main() {
           console.log(
             `${day}  ${metrics.top}  ${metrics.bottom}  ${metrics.left}  ${metrics.right}  ` +
             `${metrics.width}  ${metrics.height}  ${metrics.vw}  ${metrics.vh}  ${metrics.headerBottom}  ` +
-            `${metrics.panelTop}  ${flags.join(',')}`,
+            `${metrics.panelTop}  panelH=${metrics.panelBottom - metrics.panelTop}  ${flags.join(',')}`,
           );
         }
 

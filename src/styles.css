@@ -506,6 +506,8 @@ p {
   gap: 1rem;
   padding: 1.25rem 1.25rem 0;
   flex-wrap: wrap;
+  position: relative;
+  z-index: 20;
 }
 
 .brand-kicker {
@@ -649,7 +651,7 @@ p {
   width: 240px;
   height: 300px;
   overflow: visible;
-  transition: filter 600ms ease, transform 600ms ease;
+  transition: filter 600ms ease, transform 800ms cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 1;
 }
 
@@ -675,6 +677,11 @@ p {
   gap: 0.8rem;
   text-align: center;
   padding: 1.5rem 1.25rem 1.75rem;
+  /* The tallest panel state (cooldown + countdown). Reserving it keeps
+     the garden stage centered at exactly the same height on every day,
+     so the tree never shifts between day 0, the watering days and the
+     reward day. */
+  min-height: 272px;
 }
 
 .ritual-day-label {
@@ -771,7 +778,8 @@ p {
 
 .watering-sweep {
   position: absolute;
-  inset-y: 0;
+  top: 0;
+  bottom: 0;
   left: 0;
   width: 33.333%;
   background: linear-gradient(to right, transparent, rgba(207, 163, 86, 0.25), transparent);
@@ -1313,10 +1321,10 @@ p {
 
   /* The growth video only needs ~229px of canvas height, so the
      container is shortened to free vertical room on phones; the late
-     stages then grow 25% (anchored at the pot) without pushing the
-     crown above the header or off the top of the screen. */
+     stages then grow smoothly day by day (up to 20%, anchored at the
+     pot) without pushing the crown off the top of the screen. */
   .garden-plant.is-late-stage {
-    transform: scale(1.25);
+    transform: scale(var(--grow-scale, 1.2));
     transform-origin: 50% 100%;
   }
 }

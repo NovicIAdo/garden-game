@@ -18,9 +18,15 @@ export function GardenPlant({ stage, reducedMotion = false }) {
   const isLateStage = stage >= 5;
   const { pointerRef, handleMove, handleLeave } = usePointerParallax();
 
+  // Smooth, per-day enlargement on phones (CSS var consumed by the
+  // is-late-stage rule in the mobile media query): days 5..7 ramp
+  // 1.067 -> 1.133 -> 1.2 instead of snapping to one size.
+  const growScale = Math.round((1 + 0.2 * Math.max(0, stage - 4) / 3) * 10000) / 10000;
+
   return (
     <div
       className={`garden-plant${isFinalForm ? ' is-final-form' : ''}${isLateStage ? ' is-late-stage' : ''}`}
+      style={{ '--grow-scale': growScale }}
       aria-hidden="true"
       onPointerMove={handleMove}
       onPointerLeave={handleLeave}
