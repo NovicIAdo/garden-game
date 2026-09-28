@@ -653,19 +653,14 @@ p {
   z-index: 1;
 }
 
-/* Day 7: the looping full-tree dream performance doubles in size as a
-   celebration. Scaled from the center so the 16:9 video stays centered
-   in its canvas while the whole rendered frame grows. */
 .garden-plant.is-final-form {
   filter: drop-shadow(0 0 26px rgba(232, 207, 154, 0.35));
-  transform: scale(2);
-  transform-origin: 50% 50%;
 }
 
-/* Last three days (5–6): the whole tree frame grows 30% on the page.
+/* Last three days (5–7): the whole tree frame grows 30% on the page.
    A CSS transform scales the already-rendered canvas, so the video
    inside is NEVER cropped — it just renders larger. */
-.garden-plant.is-late-stage:not(.is-final-form) {
+.garden-plant.is-late-stage {
   transform: scale(1.3);
   transform-origin: 50% 100%;
 }
@@ -1314,13 +1309,6 @@ p {
   .garden-plant {
     width: 250px;
     height: 310px;
-  }
-
-  /* Keep the final celebration inside the phone viewport: 1.5× of the
-     250px-wide frame exactly fills a 375px screen, so the dream video
-     is never clipped on the sides. */
-  .garden-plant.is-final-form {
-    transform: scale(1.5);
   }
 }
 

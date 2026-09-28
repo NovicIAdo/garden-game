@@ -10,9 +10,11 @@ const SNAP_EPSILON = 0.04;
 
 // Final-day performance: a looping full-tree video that replaces the
 // static final frame with a living "dream" sequence, shown at full
-// frame size exactly where the tree sits.
-const DREAM_VIDEO_SRC = '/tree/dream.mp4';
-const DREAM_VIDEO_ASPECT = 1280 / 720;
+// frame size exactly where the tree sits. This is a 320x720 center crop
+// of `dream.mp4` (the tree occupies only ~20% of the wide 16:9 frame),
+// so the tree renders ~2.2x larger on screen than the full-frame video.
+const DREAM_VIDEO_SRC = '/tree/dream-tree.mp4';
+const DREAM_VIDEO_ASPECT = 320 / 720;
 const DREAM_APPEAR_DAY = 6.99;
 
 function targetTimeFor(stage, duration) {
