@@ -32,11 +32,12 @@ import {
 const PREFS_KEY = 'noviciado-garden-prefs';
 const MEMBER_KEY = 'noviciado-member-id';
 
-// Vite's real dev/production flag. Using the exact `import.meta.env.DEV`
-// expression (no optional chaining) lets Vite statically replace it with
-// `false` at build time, so the dev-only branch below is dead-code
-// eliminated from production builds rather than merely hidden at runtime.
-const isDevMode = import.meta.env.DEV;
+// Dev mode is forced on in every build (including production/Vercel) so the
+// NEXT DAY control and `?tree=N` stage preview can be used to walk through
+// the 7-day progression on deployed environments. Flip this back to
+// `import.meta.env.DEV` before the public release to compile the dev-only
+// branch out of production builds.
+const isDevMode = true;
 
 function gardenStorageKey(address) {
   return `noviciado-garden:${address}`;
