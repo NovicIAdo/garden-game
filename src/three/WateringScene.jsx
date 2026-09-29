@@ -22,13 +22,15 @@ const SPLASH_LIFE = 0.55;
  * - Check-in 1 (stage 0): raised 15% (the base landing was below the pot).
  * - Check-ins 2, 5, 6, 7 (stages 1, 4, 5, 6): raised an extra 2.5%.
  * - Check-ins 2, 4 (stages 1, 3): raised an extra 2% on top.
+ * - Check-in 2 (stage 1): raised another 1.5% on top.
+ * - Check-in 4 (stage 3): raised another 1% on top.
  * - Check-ins 4..7 (stages 3..6): landed lower as the tree grows —
  *   15% / 20% / 25% / 25%, with days 5 and 6 lowered an extra 1%,
  *   day 7 an extra 1.5%, days 6 and 7 an extra 1% / 2%, and finally
  *   day 6 another 1% and day 7 another 3% lower.
  */
 function impactYForStage(stage) {
-  const raiseBy = { 0: 0.15, 1: 0.045, 3: 0.02, 4: 0.025, 5: 0.025, 6: 0.025 }[stage] ?? 0;
+  const raiseBy = { 0: 0.15, 1: 0.06, 3: 0.03, 4: 0.025, 5: 0.025, 6: 0.025 }[stage] ?? 0;
   const lowerBy = { 3: 0.15, 4: 0.21, 5: 0.28, 6: 0.315 }[stage] ?? 0;
   return IMPACT_Y + FALL_DISTANCE * (raiseBy - lowerBy);
 }
