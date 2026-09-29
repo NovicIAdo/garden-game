@@ -189,10 +189,20 @@ export function GrowthVideo({ stage = 0, waterPulse = 0, reducedMotion = false, 
           video.pause();
         }
       } else if (Math.abs(delta) > SNAP_EPSILON) {
-        if (video.paused) {
-          video.play().catch(() => {});
+        if (delta < 0) {
+          // Going backward (new week after the reward): snap instantly.
+          // Rewinding the growth makes the full tree visibly shrink and
+          // slide left through every stage, which reads as a glitch.
+          if (!video.paused) {
+            video.pause();
+          }
+          video.currentTime = targetTime;
+        } else {
+          if (video.paused) {
+            video.play().catch(() => {});
+          }
+          video.playbackRate = PLAYBACK_RATE;
         }
-        video.playbackRate = Math.sign(delta) * PLAYBACK_RATE;
       } else {
         if (!video.paused) {
           video.pause();
