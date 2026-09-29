@@ -19,6 +19,27 @@ const DREAM_VIDEO_SRC = '/tree/dream-tree.mp4';
 const DREAM_VIDEO_ASPECT = 448 / 720;
 const DREAM_APPEAR_DAY = 6.99;
 
+/**
+ * The growth video frames were composed with the young tree leaning left
+ * of the frame center: the trunk and crown pull left on days 1-3 and the
+ * tree drifts toward center only as it grows. The frame is pure black
+ * around the tree, so shifting the plane to re-center the tree's visual
+ * mass per day is invisible except for the tree itself. Each value is
+ * the fraction of the frame width to shift right, measured as the center
+ * of the tree's bright mass at the exact pause time of that day.
+ */
+const STAGE_CENTER_OFFSET = [0.076, 0.072, 0.045, 0.028, 0.015, 0.014, 0.024, 0.025];
+
+function centerOffsetForDay(day) {
+  const clamped = THREE.MathUtils.clamp(day, 0, MAX_STAGE);
+  const lower = Math.floor(clamped);
+  const upper = Math.min(MAX_STAGE, lower + 1);
+  const t = clamped - lower;
+  const from = STAGE_CENTER_OFFSET[lower] ?? 0;
+  const to = STAGE_CENTER_OFFSET[upper] ?? 0;
+  return from + (to - from) * t;
+}
+
 function targetTimeFor(stage, duration) {
   return (THREE.MathUtils.clamp(stage, 0, MAX_STAGE) / MAX_STAGE) * duration;
 }
@@ -207,6 +228,17 @@ export function GrowthVideo({ stage = 0, waterPulse = 0, reducedMotion = false, 
     // The static tree hands the frame over to the dream entirely.
     if (meshRef.current) {
       meshRef.current.visible = !dreamActive;
+    }
+
+    // Re-center the tree's visual mass per day: the video frames lean
+    // left early on, so the plane shifts right by the stage offset.
+    // The frame is black around the tree, so only the tree moves.
+    const centerOffsetX = centerOffsetForDay(currentDay) * planeHeight * VIDEO_ASPECT;
+    if (meshRef.current) {
+      meshRef.current.position.x = centerOffsetX;
+    }
+    if (washMeshRef.current) {
+      washMeshRef.current.position.x = centerOffsetX;
     }
 
     // Frame enlargement for the last three days is handled in CSS
