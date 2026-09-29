@@ -300,6 +300,10 @@ p {
 .loading-screen {
   position: fixed;
   inset: 0;
+  /* Follow the visible (small) viewport so the content stays centered
+     above mobile browser toolbars. */
+  height: 100vh;
+  height: 100svh;
   display: grid;
   place-content: center;
   justify-items: center;
@@ -745,6 +749,10 @@ p {
 .watering-overlay {
   position: fixed;
   inset: 0;
+  /* Follow the visible (small) viewport so the pour stays centered
+     above mobile browser toolbars. */
+  height: 100vh;
+  height: 100svh;
   background: rgba(3, 3, 2, 0.92);
   display: grid;
   place-content: center;
@@ -823,6 +831,10 @@ p {
 .reward-sequence {
   position: fixed;
   inset: 0;
+  /* Follow the visible (small) viewport so the reward stays centered
+     above mobile browser toolbars. */
+  height: 100vh;
+  height: 100svh;
   background: #020202;
   display: grid;
   place-content: center;
@@ -914,6 +926,10 @@ p {
 .profile-backdrop {
   position: fixed;
   inset: 0;
+  /* Follow the visible (small) viewport so the card stays centered
+     above mobile browser toolbars. */
+  height: 100vh;
+  height: 100svh;
   background: rgba(2, 2, 2, 0.72);
   display: grid;
   place-items: center;
