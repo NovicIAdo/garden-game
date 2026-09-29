@@ -28,7 +28,7 @@ const DREAM_APPEAR_DAY = 6.99;
  * the fraction of the frame width to shift right, measured as the center
  * of the tree's bright mass at the exact pause time of that day.
  */
-const STAGE_CENTER_OFFSET = [0.076, 0.072, 0.045, 0.028, 0.015, 0.014, 0.024, 0.025];
+const STAGE_CENTER_OFFSET = [0.11, 0.072, 0.045, 0.028, 0.015, 0.014, 0.024, 0.025];
 
 function centerOffsetForDay(day) {
   const clamped = THREE.MathUtils.clamp(day, 0, MAX_STAGE);
