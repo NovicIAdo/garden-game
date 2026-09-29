@@ -23,12 +23,12 @@ const SPLASH_LIFE = 0.55;
  * - Check-ins 2, 5, 6, 7 (stages 1, 4, 5, 6): raised an extra 2.5%.
  * - Check-ins 2, 4 (stages 1, 3): raised an extra 2% on top.
  * - Check-ins 4..7 (stages 3..6): landed lower as the tree grows —
- *   15% / 20% / 25% / 25%, with days 5 and 6 lowered an extra 1%
- *   and day 7 an extra 1.5%.
+ *   15% / 20% / 25% / 25%, with days 5 and 6 lowered an extra 1%,
+ *   day 7 an extra 1.5%, and days 6 and 7 an extra 1% / 2% on top.
  */
 function impactYForStage(stage) {
   const raiseBy = { 0: 0.15, 1: 0.045, 3: 0.02, 4: 0.025, 5: 0.025, 6: 0.025 }[stage] ?? 0;
-  const lowerBy = { 3: 0.15, 4: 0.21, 5: 0.26, 6: 0.265 }[stage] ?? 0;
+  const lowerBy = { 3: 0.15, 4: 0.21, 5: 0.27, 6: 0.285 }[stage] ?? 0;
   return IMPACT_Y + FALL_DISTANCE * (raiseBy - lowerBy);
 }
 
