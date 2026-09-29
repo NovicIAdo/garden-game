@@ -7,11 +7,29 @@ import { GoldDust, ParticleBurst } from './GoldParticles.jsx';
 
 const POUR_START_Y = 2.2;
 const IMPACT_Y = -0.15;
+const FALL_DISTANCE = POUR_START_Y - IMPACT_Y;
 const DROP_Z = 0.35;
 const DROP_DELAY = 0.18;
 const DROP_DURATION = 0.85;
 const SQUASH_DURATION = 0.16;
 const SPLASH_LIFE = 0.55;
+
+/**
+ * Landing height per check-in day, tuned so the drop reads naturally
+ * against the tree it is falling onto.
+ *
+ * - First check-in (stage 0): the default landing was below the pot, so
+ *   it is raised 15% of the fall distance.
+ * - Check-ins 4..7 (stages 3..6): the trees are progressively taller, so
+ *   the drop lands 15% / 20% / 25% / 25% of the fall distance lower.
+ */
+function impactYForStage(stage) {
+  if (stage <= 0) {
+    return IMPACT_Y + FALL_DISTANCE * 0.15;
+  }
+  const lowerBy = { 3: 0.15, 4: 0.2, 5: 0.25, 6: 0.25 }[stage] ?? 0;
+  return IMPACT_Y - FALL_DISTANCE * lowerBy;
+}
 
 /**
  * A water drop as a proper teardrop: a spherical bulb at the bottom that
@@ -46,9 +64,9 @@ function createTeardropGeometry(bulbRadius = 0.06, tipHeight = 0.17) {
 }
 
 /** Position of the drop at a given fall progress, with gravity ease-in. */
-function dropYAt(progress) {
+function dropYAt(progress, impactY) {
   const fall = progress * progress;
-  return POUR_START_Y - fall * (POUR_START_Y - IMPACT_Y);
+  return POUR_START_Y - fall * (POUR_START_Y - impactY);
 }
 
 /**
@@ -56,7 +74,7 @@ function dropYAt(progress) {
  * slightly like a real falling drop, leaves a soft golden shimmer trail,
  * and squashes when it lands on the soil.
  */
-function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
+function SingleDrop({ pourStart, impactY, geometry, material, trailMaterial }) {
   const meshRef = useRef(null);
   const trailRefs = useRef([]);
 
@@ -76,7 +94,7 @@ function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
         meshRef.current.visible = true;
         meshRef.current.position.set(
           Math.sin(elapsed * 20) * 0.006,
-          dropYAt(progress),
+          dropYAt(progress, impactY),
           DROP_Z,
         );
         meshRef.current.rotation.z = Math.sin(elapsed * 26) * 0.04;
@@ -85,7 +103,7 @@ function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
         // Landing squash before vanishing into the splash.
         const p = (elapsed - DROP_DURATION) / SQUASH_DURATION;
         meshRef.current.visible = true;
-        meshRef.current.position.set(0, IMPACT_Y, DROP_Z);
+        meshRef.current.position.set(0, impactY, DROP_Z);
         meshRef.current.rotation.z = 0;
         meshRef.current.scale.set(1 + 0.5 * p, 1 - 0.55 * p, 1 + 0.5 * p);
       } else {
@@ -105,7 +123,7 @@ function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
         trail.visible = true;
         trail.position.set(
           Math.sin(trailElapsed * 20) * 0.006,
-          dropYAt(progress),
+          dropYAt(progress, impactY),
           DROP_Z - 0.02,
         );
         const fade = 1 - progress;
@@ -139,7 +157,7 @@ function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
  * The single landing splash: micro-teardrops kicked outward and a thin
  * gold ring expanding across the soil, both fading out fast.
  */
-function ImpactSplash({ hit, geometry, material }) {
+function ImpactSplash({ hit, impactY, geometry, material }) {
   const startRef = useRef(-Infinity);
   const splashRefs = useRef([]);
   const ringRef = useRef(null);
@@ -170,7 +188,7 @@ function ImpactSplash({ hit, geometry, material }) {
       mesh.visible = active;
       if (active) {
         const { vx, vy, scale, tilt } = splashlets[i];
-        mesh.position.set(vx * p, IMPACT_Y + vy * p - 3.2 * p * p, DROP_Z);
+        mesh.position.set(vx * p, impactY + vy * p - 3.2 * p * p, DROP_Z);
         mesh.rotation.z = tilt + tilt * p;
         mesh.scale.setScalar(scale * (1 - p));
       }
@@ -199,7 +217,7 @@ function ImpactSplash({ hit, geometry, material }) {
           visible={false}
         />
       ))}
-      <mesh ref={ringRef} position={[0, IMPACT_Y, DROP_Z - 0.02]} rotation-x={-Math.PI / 2} visible={false}>
+      <mesh ref={ringRef} position={[0, impactY, DROP_Z - 0.02]} rotation-x={-Math.PI / 2} visible={false}>
         <ringGeometry args={[0.75, 0.95, 28]} />
         <meshBasicMaterial
           color="#ffdf9e"
@@ -225,6 +243,8 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
   const [growthStage, setGrowthStage] = useState(fromStage);
   const [impacted, setImpacted] = useState(false);
   const pourStartRef = useRef(performance.now());
+
+  const impactY = impactYForStage(fromStage);
 
   useEffect(() => {
     if (phase === 'settling' || phase === 'result') {
@@ -296,6 +316,7 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
       {!reducedMotion && pouring ? (
         <SingleDrop
           pourStart={pourStartRef}
+          impactY={impactY}
           geometry={teardropGeometry}
           material={teardropMaterial}
           trailMaterial={trailMaterial}
@@ -303,7 +324,7 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
       ) : null}
 
       {!reducedMotion ? (
-        <ImpactSplash hit={impacted} geometry={teardropGeometry} material={teardropMaterial} />
+        <ImpactSplash hit={impacted} impactY={impactY} geometry={teardropGeometry} material={teardropMaterial} />
       ) : null}
 
       <ParticleBurst
