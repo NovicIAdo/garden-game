@@ -8,7 +8,10 @@ import { GoldDust, ParticleBurst } from './GoldParticles.jsx';
 const POUR_START_Y = 2.2;
 const IMPACT_Y = -0.15;
 const DROP_Z = 0.35;
-const SPLASH_LIFE = 0.5;
+const DROP_DELAY = 0.18;
+const DROP_DURATION = 0.85;
+const SQUASH_DURATION = 0.16;
+const SPLASH_LIFE = 0.55;
 
 /**
  * A water drop as a proper teardrop: a spherical bulb at the bottom that
@@ -42,59 +45,101 @@ function createTeardropGeometry(bulbRadius = 0.06, tipHeight = 0.17) {
   return geometry;
 }
 
-const DROPS = [
-  { delay: 0.08, x: -0.18, scale: 1.0, tilt: -0.05, duration: 0.6 },
-  { delay: 0.38, x: 0.13, scale: 0.8, tilt: 0.06, duration: 0.55 },
-  { delay: 0.68, x: -0.04, scale: 1.1, tilt: -0.02, duration: 0.52 },
-  { delay: 0.95, x: 0.19, scale: 0.7, tilt: 0.08, duration: 0.5 },
-];
-
-const SPLASHETS = [
-  { vx: 0.5, vy: 0.62, scale: 0.34, tilt: -0.5 },
-  { vx: -0.42, vy: 0.74, scale: 0.28, tilt: 0.55 },
-  { vx: 0.14, vy: 0.9, scale: 0.24, tilt: 0.1 },
-  { vx: -0.06, vy: 0.5, scale: 0.4, tilt: -0.15 },
-];
-
-/**
- * One falling teardrop. Gravity eases it in (quadratic fall), with a tiny
- * lateral sway so the stream feels alive; it disappears at the soil.
- */
-function WaterDrop({ pourStart, delay, x, scale, tilt, duration, geometry, material }) {
-  const meshRef = useRef(null);
-
-  useFrame(() => {
-    if (!meshRef.current) {
-      return;
-    }
-
-    const elapsed = (performance.now() - pourStart.current) / 1000 - delay;
-    const progress = Math.min(1, Math.max(0, elapsed / duration));
-
-    if (progress >= 1) {
-      meshRef.current.visible = false;
-      return;
-    }
-
-    meshRef.current.visible = true;
-    const fall = progress * progress;
-    meshRef.current.position.set(
-      x + Math.sin(elapsed * 22) * 0.008,
-      POUR_START_Y - fall * (POUR_START_Y - IMPACT_Y),
-      DROP_Z,
-    );
-    meshRef.current.rotation.z = tilt;
-    meshRef.current.scale.setScalar(scale);
-  });
-
-  return <mesh ref={meshRef} geometry={geometry} material={material} visible={false} />;
+/** Position of the drop at a given fall progress, with gravity ease-in. */
+function dropYAt(progress) {
+  const fall = progress * progress;
+  return POUR_START_Y - fall * (POUR_START_Y - IMPACT_Y);
 }
 
 /**
- * The splash at one drop impact: a few micro-teardrops kicked outward and
- * a thin gold ring expanding across the soil, both fading out fast.
+ * One beautiful drop: hangs for a beat, falls with gravity, wobbles
+ * slightly like a real falling drop, leaves a soft golden shimmer trail,
+ * and squashes when it lands on the soil.
  */
-function ImpactSplash({ hit, x, geometry, material }) {
+function SingleDrop({ pourStart, geometry, material, trailMaterial }) {
+  const meshRef = useRef(null);
+  const trailRefs = useRef([]);
+
+  useFrame(() => {
+    const elapsed = (performance.now() - pourStart.current) / 1000 - DROP_DELAY;
+
+    if (meshRef.current) {
+      if (elapsed < 0) {
+        // Waiting to fall: shimmer at the top.
+        const shimmer = Math.sin(performance.now() / 90) * 0.02;
+        meshRef.current.visible = true;
+        meshRef.current.position.set(0, POUR_START_Y + shimmer, DROP_Z);
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.setScalar(1);
+      } else if (elapsed < DROP_DURATION) {
+        const progress = elapsed / DROP_DURATION;
+        meshRef.current.visible = true;
+        meshRef.current.position.set(
+          Math.sin(elapsed * 20) * 0.006,
+          dropYAt(progress),
+          DROP_Z,
+        );
+        meshRef.current.rotation.z = Math.sin(elapsed * 26) * 0.04;
+        meshRef.current.scale.setScalar(1);
+      } else if (elapsed < DROP_DURATION + SQUASH_DURATION) {
+        // Landing squash before vanishing into the splash.
+        const p = (elapsed - DROP_DURATION) / SQUASH_DURATION;
+        meshRef.current.visible = true;
+        meshRef.current.position.set(0, IMPACT_Y, DROP_Z);
+        meshRef.current.rotation.z = 0;
+        meshRef.current.scale.set(1 + 0.5 * p, 1 - 0.55 * p, 1 + 0.5 * p);
+      } else {
+        meshRef.current.visible = false;
+      }
+    }
+
+    for (let i = 0; i < trailRefs.current.length; i += 1) {
+      const trail = trailRefs.current[i];
+      if (!trail) {
+        continue;
+      }
+      const lag = 0.06 + i * 0.055;
+      const trailElapsed = elapsed - lag;
+      if (trailElapsed >= 0 && trailElapsed < DROP_DURATION) {
+        const progress = trailElapsed / DROP_DURATION;
+        trail.visible = true;
+        trail.position.set(
+          Math.sin(trailElapsed * 20) * 0.006,
+          dropYAt(progress),
+          DROP_Z - 0.02,
+        );
+        const fade = 1 - progress;
+        trail.material.opacity = fade * (0.34 - i * 0.08);
+        trail.scale.setScalar(0.85 - i * 0.18);
+      } else {
+        trail.visible = false;
+      }
+    }
+  });
+
+  return (
+    <group>
+      <mesh ref={meshRef} geometry={geometry} material={material} visible={false} />
+      {[0, 1, 2].map((index) => (
+        <mesh
+          key={index}
+          ref={(node) => {
+            trailRefs.current[index] = node;
+          }}
+          geometry={geometry}
+          material={trailMaterial}
+          visible={false}
+        />
+      ))}
+    </group>
+  );
+}
+
+/**
+ * The single landing splash: micro-teardrops kicked outward and a thin
+ * gold ring expanding across the soil, both fading out fast.
+ */
+function ImpactSplash({ hit, geometry, material }) {
   const startRef = useRef(-Infinity);
   const splashRefs = useRef([]);
   const ringRef = useRef(null);
@@ -110,15 +155,22 @@ function ImpactSplash({ hit, x, geometry, material }) {
     const active = elapsed >= 0 && elapsed < SPLASH_LIFE;
     const p = Math.min(1, Math.max(0, elapsed / SPLASH_LIFE));
 
-    for (let i = 0; i < SPLASHETS.length; i += 1) {
+    const splashlets = [
+      { vx: 0.42, vy: 0.62, scale: 0.34, tilt: -0.5 },
+      { vx: -0.36, vy: 0.74, scale: 0.28, tilt: 0.55 },
+      { vx: 0.12, vy: 0.92, scale: 0.24, tilt: 0.1 },
+      { vx: -0.06, vy: 0.5, scale: 0.4, tilt: -0.15 },
+    ];
+
+    for (let i = 0; i < splashlets.length; i += 1) {
       const mesh = splashRefs.current[i];
       if (!mesh) {
         continue;
       }
       mesh.visible = active;
       if (active) {
-        const { vx, vy, scale, tilt } = SPLASHETS[i];
-        mesh.position.set(x + vx * p, IMPACT_Y + vy * p - 3.2 * p * p, DROP_Z);
+        const { vx, vy, scale, tilt } = splashlets[i];
+        mesh.position.set(vx * p, IMPACT_Y + vy * p - 3.2 * p * p, DROP_Z);
         mesh.rotation.z = tilt + tilt * p;
         mesh.scale.setScalar(scale * (1 - p));
       }
@@ -127,7 +179,7 @@ function ImpactSplash({ hit, x, geometry, material }) {
     if (ringRef.current) {
       ringRef.current.visible = active;
       if (active) {
-        const ringScale = 0.18 + 1.05 * p;
+        const ringScale = 0.2 + 1.15 * p;
         ringRef.current.scale.set(ringScale, ringScale, ringScale);
         ringRef.current.material.opacity = 0.5 * (1 - p);
       }
@@ -136,7 +188,7 @@ function ImpactSplash({ hit, x, geometry, material }) {
 
   return (
     <group>
-      {SPLASHETS.map((_, index) => (
+      {[0, 1, 2, 3].map((index) => (
         <mesh
           key={index}
           ref={(node) => {
@@ -147,7 +199,7 @@ function ImpactSplash({ hit, x, geometry, material }) {
           visible={false}
         />
       ))}
-      <mesh ref={ringRef} position={[x, IMPACT_Y, DROP_Z - 0.02]} rotation-x={-Math.PI / 2} visible={false}>
+      <mesh ref={ringRef} position={[0, IMPACT_Y, DROP_Z - 0.02]} rotation-x={-Math.PI / 2} visible={false}>
         <ringGeometry args={[0.75, 0.95, 28]} />
         <meshBasicMaterial
           color="#ffdf9e"
@@ -163,58 +215,15 @@ function ImpactSplash({ hit, x, geometry, material }) {
 }
 
 /**
- * The pouring stream: a staggered line of teardrops raining onto the
- * soil, each with its own splash and ripple on impact.
- */
-function WaterPour({ pourStart, geometry, material }) {
-  const [, force] = useState(0);
-  const impactsRef = useRef(DROPS.map(() => false));
-
-  useFrame(() => {
-    const elapsed = (performance.now() - pourStart.current) / 1000;
-    let changed = false;
-    DROPS.forEach((drop, index) => {
-      const landed = elapsed >= drop.delay + drop.duration;
-      if (landed !== impactsRef.current[index]) {
-        impactsRef.current[index] = landed;
-        changed = true;
-      }
-    });
-    if (changed) {
-      force((value) => value + 1);
-    }
-  });
-
-  return (
-    <group>
-      {DROPS.map((drop, index) => (
-        <group key={index}>
-          <WaterDrop
-            pourStart={pourStart}
-            delay={drop.delay}
-            x={drop.x}
-            scale={drop.scale}
-            tilt={drop.tilt}
-            duration={drop.duration}
-            geometry={geometry}
-            material={material}
-          />
-          <ImpactSplash hit={impactsRef.current[index]} x={drop.x} geometry={geometry} material={material} />
-        </group>
-      ))}
-    </group>
-  );
-}
-
-/**
- * The full watering reaction: teardrops rain onto the soil while the
- * camera pushes toward the pot, the tree grows from `fromStage` to
- * `toStage` (video playback inside TreeStageSprite — the check-in
- * cutscene) under a gold light wash, and each drop's impact kicks up a
- * micro-splash and a soil ripple — all real 3D motion driven by `phase`.
+ * The full watering reaction: one beautiful teardrop falls onto the
+ * soil while the camera pushes toward the pot, then the tree grows from
+ * `fromStage` to `toStage` (video playback inside TreeStageSprite — the
+ * check-in cutscene) under a gold light wash, with a landing splash and
+ * a soil ripple — all real 3D motion driven by `phase`.
  */
 export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
   const [growthStage, setGrowthStage] = useState(fromStage);
+  const [impacted, setImpacted] = useState(false);
   const pourStartRef = useRef(performance.now());
 
   useEffect(() => {
@@ -232,9 +241,9 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
   const teardropGeometry = useMemo(() => createTeardropGeometry(), []);
   const teardropMaterial = useMemo(
     () => new THREE.MeshPhysicalMaterial({
-      // Opalescent water: no transmission (transmissive passes render
-      // unreliably on some GPUs / software WebGL), strong clearcoat +
-      // specular so the drop glints like water against the dark scene.
+      // Opalescent water: strong clearcoat + specular so the drop glints
+      // like water against the dark scene, with a faint inner glow so
+      // the shape always reads.
       color: '#eef3f7',
       roughness: 0.05,
       metalness: 0.05,
@@ -249,11 +258,32 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
     }),
     [],
   );
+  const trailMaterial = useMemo(
+    () => new THREE.MeshBasicMaterial({
+      color: '#ffe9b8',
+      transparent: true,
+      opacity: 0,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    }),
+    [],
+  );
 
   useEffect(() => () => {
     teardropMaterial.dispose();
+    trailMaterial.dispose();
     teardropGeometry.dispose();
-  }, [teardropMaterial, teardropGeometry]);
+  }, [teardropMaterial, trailMaterial, teardropGeometry]);
+
+  // Fire the splash once the drop has landed.
+  useFrame(() => {
+    const elapsed = (performance.now() - pourStartRef.current) / 1000 - DROP_DELAY;
+    const landed = elapsed >= DROP_DURATION;
+    if (landed !== impacted && phase !== 'result') {
+      setImpacted(landed);
+    }
+  });
 
   const pouring = phase === 'pouring' || phase === 'settling';
 
@@ -264,7 +294,16 @@ export function WateringScene({ fromStage, toStage, phase, reducedMotion }) {
       <GoldDust count={36} reducedMotion={reducedMotion} />
 
       {!reducedMotion && pouring ? (
-        <WaterPour pourStart={pourStartRef} geometry={teardropGeometry} material={teardropMaterial} />
+        <SingleDrop
+          pourStart={pourStartRef}
+          geometry={teardropGeometry}
+          material={teardropMaterial}
+          trailMaterial={trailMaterial}
+        />
+      ) : null}
+
+      {!reducedMotion ? (
+        <ImpactSplash hit={impacted} geometry={teardropGeometry} material={teardropMaterial} />
       ) : null}
 
       <ParticleBurst
