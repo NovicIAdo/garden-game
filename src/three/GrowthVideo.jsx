@@ -21,14 +21,15 @@ const DREAM_APPEAR_DAY = 6.99;
 
 /**
  * The growth video frames were composed with the young tree leaning left
- * of the frame center: the trunk and crown pull left on days 1-3 and the
- * tree drifts toward center only as it grows. The frame is pure black
- * around the tree, so shifting the plane to re-center the tree's visual
- * mass per day is invisible except for the tree itself. Each value is
- * the fraction of the frame width to shift right, measured as the center
- * of the tree's bright mass at the exact pause time of that day.
+ * of the frame center: the trunk and pot sit left on days 1-3 and only
+ * drift toward center as the tree grows. The frame is pure black around
+ * the tree, so shifting the plane to re-center the tree per day is
+ * invisible except for the tree itself. Each value is the fraction of
+ * the frame width to shift right, balancing the trunk/pot position (what
+ * the eye anchors on) with the crown, measured at the exact pause time
+ * of that day.
  */
-const STAGE_CENTER_OFFSET = [0.11, 0.072, 0.045, 0.028, 0.015, 0.014, 0.024, 0.025];
+const STAGE_CENTER_OFFSET = [0.15, 0.12, 0.066, 0.02, 0.02, 0.025, 0.03, 0.03];
 
 function centerOffsetForDay(day) {
   const clamped = THREE.MathUtils.clamp(day, 0, MAX_STAGE);
